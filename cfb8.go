@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"io"
 )
 
 // CFB stream with 8 bit segment size
@@ -14,18 +13,18 @@ type CFB8 struct {
 	in        []byte
 	out       []byte
 
-	// decrypt bool
+	decrypt bool
 }
 
-func (x *CFB8) XORKeyStream(dst, src []byte, decrypt bool) {
+func (x *CFB8) XORKeyStream(dst, src []byte) {
 	for i := range src {
 		x.b.Encrypt(x.out, x.in)
 		copy(x.in[:x.blockSize-1], x.in[1:])
-		if decrypt {
+		if x.decrypt {
 			x.in[x.blockSize-1] = src[i]
 		}
 		dst[i] = src[i] ^ x.out[0]
-		if !decrypt {
+		if !x.decrypt {
 			x.in[x.blockSize-1] = dst[i]
 		}
 	}
@@ -45,7 +44,7 @@ func (x *CFB8) XORKeyStream(dst, src []byte, decrypt bool) {
 // 	return NewCFB8(block, iv, true)
 // }
 
-func NewCFB8(block cipher.Block, iv []byte /*, decrypt bool*/) *CFB8 /*cipher.Stream*/ {
+func NewCFB8(block cipher.Block, iv []byte, decrypt bool) cipher.Stream {
 	blockSize := block.BlockSize()
 	if len(iv) != blockSize {
 		// stack trace will indicate whether it was de or encryption
@@ -56,50 +55,62 @@ func NewCFB8(block cipher.Block, iv []byte /*, decrypt bool*/) *CFB8 /*cipher.St
 		blockSize: blockSize,
 		out:       make([]byte, blockSize),
 		in:        make([]byte, blockSize),
-		// decrypt:   decrypt,
+		decrypt:   decrypt,
 	}
 	copy(x.in, iv)
 
 	return x
 }
 
-type AESCFB8ReadWriteCloser struct {
-	stream io.ReadWriteCloser
-	cfb8 *CFB8
-}
-
-func NewAESCFB8ReadWriteCloser(stream io.ReadWriteCloser, key []byte) *AESCFB8ReadWriteCloser {
+func NewAESCFB8(key []byte, decrypt bool) cipher.Stream {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		panic(err)
 	}
-	return &AESCFB8ReadWriteCloser{
-		stream,
-		NewCFB8(block, key),
-	}
+	return NewCFB8(block, key, decrypt)
 }
 
-func (c *AESCFB8ReadWriteCloser) Read(b []byte) (int, error) {
-	src := make([]byte, len(b))
-	n, err := c.stream.Read(b)
-	if err != nil {
-		return n, err
-	}
-	// TODO: Decrypt
-	c.cfb8.XORKeyStream(b, src, true)
-	return n, nil
-}
+// type AESCFB8ReadWriteCloser struct {
+// 	stream io.ReadWriteCloser
+// 	encrypter *CFB8
+// 	decrypter *CFB8
+// }
 
-func (c *AESCFB8ReadWriteCloser) Write(p []byte) (n int, err error) {
-	// TODO: Encrypt
-	dst := make([]byte, len(p))
-	c.cfb8.XORKeyStream(dst, p, false)
-	return c.stream.Write(dst)
-}
+// func NewAESCFB8ReadWriteCloser(stream io.ReadWriteCloser, key []byte) *AESCFB8ReadWriteCloser {
+// 	block, err := aes.NewCipher(key)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	cipher.StreamReader{
+// 		cipher.NewCFBEncrypter(block, key),
+// 		stream,
+// 	}
+// 	return &AESCFB8ReadWriteCloser{
+// 		stream,
+// 		NewCFB8(block, key, false),
+// 		NewCFB8(block, key, true),
+// 	}
+// }
 
-func (c *AESCFB8ReadWriteCloser) Close() error {
-	return c.stream.Close()
-}
+// func (c *AESCFB8ReadWriteCloser) Read(b []byte) (int, error) {
+// 	src := make([]byte, len(b))
+// 	n, err := c.stream.Read(b)
+// 	if err != nil {
+// 		return n, err
+// 	}
+// 	c.decrypter.XORKeyStream(b, src)
+// 	return n, nil
+// }
+
+// func (c *AESCFB8ReadWriteCloser) Write(p []byte) (n int, err error) {
+// 	dst := make([]byte, len(p))
+// 	c.encrypter.XORKeyStream(dst, p)
+// 	return c.stream.Write(dst)
+// }
+
+// func (c *AESCFB8ReadWriteCloser) Close() error {
+// 	return c.stream.Close()
+// }
 
 // func (c *CFB8) Encrypt(ciphertext, plaintext, nonce []byte) ([]byte, error) {
 // 	NewCFB8(c.block, c.iv, false)

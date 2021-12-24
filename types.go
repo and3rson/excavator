@@ -38,7 +38,7 @@ func (p *Packet) String() string {
 	}
 	// io.R p.Data.Peek()
 	return fmt.Sprintf(
-		"{Packet length=%d id=%02x data=%s}",
+		"{Packet length=%d id=%02x data=\u001b[38;5;34m%s\u001b[0m}",
 		p.Length, p.PacketID, strings.Join(dataRepr, " "),
 	)
 }
@@ -108,11 +108,11 @@ func (s String) ToBytes() []byte {
 }
 
 func (s *String) FromReader(r io.Reader) error {
-	length := []byte{0}
-	if _, err := r.Read(length); err != nil {
+	var length VarInt
+	if err := length.FromReader(r); err != nil {
 		return err
 	}
-	data := make([]byte, length[0])
+	data := make([]byte, length)
 	if _, err := r.Read(data); err != nil {
 		return err
 	}
