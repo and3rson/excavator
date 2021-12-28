@@ -2,16 +2,11 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
-	// "compress/flate"
 	"compress/zlib"
 	"crypto/cipher"
 	"fmt"
 	"io"
-
-	// "io/ioutil"
-
-	log "github.com/sirupsen/logrus"
+	"io/ioutil"
 )
 
 type PacketStream struct {
@@ -70,69 +65,62 @@ func NewPacketStreamWriter(stream io.WriteCloser) *PacketStreamWriter {
 	return &PacketStreamWriter{stream, -1}
 }
 
-func (r *PacketStreamReader) ReadPacket() (*Packet, error) {
+func (r *PacketStreamReader) ReadPacket() (VarInt, *bytes.Buffer, bool, error) {
 	length := VarInt(0)
 	packetID := VarInt(0)
 	var packetData []byte
-	var p *Packet
 	var err error
 	var reader io.Reader = r
 	var bodyLength VarInt
 	compressed := false
 	// data := bytes.NewBuffer([]byte{})
 	if err := length.FromReader(r); err != nil {
-		return nil, fmt.Errorf("packetstream: read length: %s", err)
+		return 0, nil, false, fmt.Errorf("packetstream: read length: %s", err)
 	}
-	log.Tracef("Incoming length: %d", length)
+	// log.Tracef("packetstream: Incoming length: %d", length)
 	if r.compressionThreshold != -1 {
 		// Compression enabled
 		uncompressedLength := VarInt(0)
 		if err = uncompressedLength.FromReader(r); err != nil {
-			return nil, fmt.Errorf("packetstream: read body length: %s", err)
-		}
-		if uncompressedLength != 0 {
-			log.Tracef("Uncompressed length: %d", uncompressedLength)
-			compressed = true
-			if reader, err = zlib.NewReader(r); err != nil {
-				return nil, fmt.Errorf("packetstream: init zlib reader: %s", err)
-			}
+			return 0, nil, false, fmt.Errorf("packetstream: read body length: %s", err)
 		}
 		bodyLength = length - VarInt(len(uncompressedLength.ToBytes()))
+		if uncompressedLength != 0 {
+			// log.Tracef("packetstream: Uncompressed length: %d", uncompressedLength)
+			compressed = true
+			// Pre-read data into buffer so that zlib does not mess up our stream
+			buf := bytes.NewBuffer([]byte{})
+			if _, err = io.CopyN(buf, r, int64(bodyLength)); err != nil {
+				return 0, nil, false, fmt.Errorf("packetstream: pre-read compressed data: %s", err)
+			}
+			if reader, err = zlib.NewReader(buf); err != nil {
+				return 0, nil, false, fmt.Errorf("packetstream: init zlib reader: %s", err)
+			}
+		}
 		// bodyLength = length
 	} else {
 		// Compression disabled
 		bodyLength = length
 	}
 
+	// log.Infof("will read %d bytes", bodyLength)
+
 	if err = packetID.FromReader(reader); err != nil {
-		return nil, fmt.Errorf("packetstream: read id: %s", err)
+		return 0, nil, false, fmt.Errorf("packetstream: read id: %s", err)
 	}
 	// fmt.Println("len", length, "packet id", packetID)
-	packetData = make([]byte, int(bodyLength) - len(packetID.ToBytes()))
+	packetData = make([]byte, int(bodyLength)-len(packetID.ToBytes()))
 	if _, err = io.ReadFull(reader, packetData); err != nil {
-		return nil, fmt.Errorf("packetstream: read body: %s", err)
+		return 0, nil, false, fmt.Errorf("packetstream: read body: %s", err)
 	}
-	p = &Packet{
-		Length:   bodyLength,
-		PacketID: packetID,
-		Data:     bytes.NewBuffer(packetData),
-	}
-	flags := ""
-	if r.compressionThreshold != -1 {
-		if compressed {
-			flags = "ZZ"
-		} else {
-			flags = "Z"
-		}
-	}
-	log.Tracef("<<%s %s", flags, p)
-	return p, nil
+
+	return packetID, bytes.NewBuffer(packetData), compressed, nil
 }
 
-func (w *PacketStreamWriter) WritePacket(p *Packet) error {
-	packetIDBytes := p.PacketID.ToBytes()
-	p.Length = VarInt(len(packetIDBytes) + p.Data.Len())
-	var packetBody = append(p.PacketID.ToBytes(), p.Data.Bytes()...)
+func (w *PacketStreamWriter) WritePacket(packetID VarInt, data *bytes.Buffer) (bool, error) {
+	packetIDBytes := packetID.ToBytes()
+	length := VarInt(len(packetIDBytes) + data.Len())
+	var packetBody = append(packetID.ToBytes(), data.Bytes()...)
 	// var writer io.Writer = w
 	compressed := false
 	if w.compressionThreshold >= 0 {
@@ -144,27 +132,27 @@ func (w *PacketStreamWriter) WritePacket(p *Packet) error {
 			compressedBuffer := bytes.NewBuffer([]byte{})
 			compressor := zlib.NewWriter(compressedBuffer)
 			if _, err = compressor.Write(packetBody); err != nil {
-				return err
+				return false, err
 			}
 			if packetBody, err = ioutil.ReadAll(compressedBuffer); err != nil {
-				return err
+				return false, err
 			}
 			compressed = true
-			uncompressedLength = p.Length
+			uncompressedLength = length
 		}
 		if _, err := w.Write(VarInt(len(uncompressedLength.ToBytes()) + len(packetBody)).ToBytes()); err != nil {
-			return fmt.Errorf("packetstream: write length (1)")
+			return false, fmt.Errorf("packetstream: write length (1)")
 		}
 		if _, err := w.Write(uncompressedLength.ToBytes()); err != nil {
-			return fmt.Errorf("packetstream: write length (2)")
+			return false, fmt.Errorf("packetstream: write length (2)")
 		}
 		if _, err := w.Write(packetBody); err != nil {
-			return fmt.Errorf("packetstream: write body")
+			return false, fmt.Errorf("packetstream: write body")
 		}
 	} else {
 		// Compression disabled
-		if _, err := w.Write(append(p.Length.ToBytes(), packetBody...)); err != nil {
-			return fmt.Errorf("packetstream: write packet: %s", err)
+		if _, err := w.Write(append(length.ToBytes(), packetBody...)); err != nil {
+			return false, fmt.Errorf("packetstream: write packet: %s", err)
 		}
 		// if _, err := w.Write(append(p.Length.ToBytes(), packetIDBytes...)); err != nil {
 		// 	return fmt.Errorf("packetstream: write length: %s", err)
@@ -173,17 +161,8 @@ func (w *PacketStreamWriter) WritePacket(p *Packet) error {
 		// 	return fmt.Errorf("packetstream: write body: %s", err)
 		// }
 	}
-	flags := ""
-	if w.compressionThreshold != -1 {
-		if compressed {
-			flags = "ZZ"
-		} else {
-			flags = "Z"
-		}
-	}
 
-	log.Tracef(">>%s %s", flags, p)
-	return nil
+	return compressed, nil
 }
 
 // func (s *PacketStreamReader) Close() error {

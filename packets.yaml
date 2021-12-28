@@ -1,0 +1,142 @@
+# Taken from https://pastebin.com/STV7DA7Q
+Play:
+    ServerBound:
+        0: PacketPlayInTeleportAccept
+        1: PacketPlayInTabComplete
+        2: PacketPlayInChat
+        3: PacketPlayInClientCommand
+        4: PacketPlayInSettings
+        5: PacketPlayInTransaction
+        6: PacketPlayInEnchantItem
+        7: PacketPlayInWindowClick
+        8: PacketPlayInCloseWindow
+        9: PacketPlayInCustomPayload
+        a: PacketPlayInUseEntity
+        b: PacketPlayInKeepAlive
+        c: PacketPlayInFlying
+        d: PacketPlayInPosition
+        e: PacketPlayInPositionLook
+        f: PacketPlayInLook
+        10: PacketPlayInVehicleMove
+        11: PacketPlayInBoatMove
+        12: PacketPlayInAutoRecipe
+        13: PacketPlayInAbilities
+        14: PacketPlayInBlockDig
+        15: PacketPlayInEntityAction
+        16: PacketPlayInSteerVehicle
+        17: PacketPlayInRecipeDisplayed
+        18: PacketPlayInResourcePackStatus
+        19: PacketPlayInAdvancements
+        1a: PacketPlayInHeldItemSlot
+        1b: PacketPlayInSetCreativeSlot
+        1c: PacketPlayInUpdateSign
+        1d: PacketPlayInArmAnimation
+        1e: PacketPlayInSpectate
+        1f: PacketPlayInUseItem
+        20: PacketPlayInBlockPlace
+    ClientBound:
+        0: PacketPlayOutSpawnEntity
+        1: PacketPlayOutSpawnEntityExperienceOrb
+        2: PacketPlayOutSpawnEntityWeather
+        3: PacketPlayOutSpawnEntityLiving
+        4: PacketPlayOutSpawnEntityPainting
+        5: PacketPlayOutNamedEntitySpawn
+        6: PacketPlayOutAnimation
+        7: PacketPlayOutStatistic
+        8: PacketPlayOutBlockBreakAnimation
+        9: PacketPlayOutTileEntityData
+        a: PacketPlayOutBlockAction
+        b: PacketPlayOutBlockChange
+        c: PacketPlayOutBoss
+        d: PacketPlayOutServerDifficulty
+        e: PacketPlayOutTabComplete
+        f: PacketPlayOutChat
+        10: PacketPlayOutMultiBlockChange
+        11: PacketPlayOutTransaction
+        12: PacketPlayOutCloseWindow
+        13: PacketPlayOutOpenWindow
+        14: PacketPlayOutWindowItems
+        15: PacketPlayOutWindowData
+        16: PacketPlayOutSetSlot
+        17: PacketPlayOutSetCooldown
+        18: PacketPlayOutCustomPayload
+        19: PacketPlayOutCustomSoundEffect
+        1a: PacketPlayOutKickDisconnect
+        1b: PacketPlayOutEntityStatus
+        1c: PacketPlayOutExplosion
+        1d: PacketPlayOutUnloadChunk
+        1e: PacketPlayOutGameStateChange
+        1f: PacketPlayOutKeepAlive
+        20: PacketPlayOutMapChunk
+        21: PacketPlayOutWorldEvent
+        22: PacketPlayOutWorldParticles
+        23: PacketPlayOutLogin
+        24: PacketPlayOutMap
+        25: PacketPlayOutEntity
+        26: PacketPlayOutRelEntityMove
+        27: PacketPlayOutRelEntityMoveLook
+        28: PacketPlayOutEntityLook
+        29: PacketPlayOutVehicleMove
+        2a: PacketPlayOutOpenSignEditor
+        2b: PacketPlayOutAutoRecipe
+        2c: PacketPlayOutAbilities
+        2d: PacketPlayOutCombatEvent
+        2e: PacketPlayOutPlayerInfo
+        2f: PacketPlayOutPosition
+        30: PacketPlayOutBed
+        31: PacketPlayOutRecipes
+        32: PacketPlayOutEntityDestroy
+        33: PacketPlayOutRemoveEntityEffect
+        34: PacketPlayOutResourcePackSend
+        35: PacketPlayOutRespawn
+        36: PacketPlayOutEntityHeadRotation
+        37: PacketPlayOutSelectAdvancementTab
+        38: PacketPlayOutWorldBorder
+        39: PacketPlayOutCamera
+        3a: PacketPlayOutHeldItemSlot
+        3b: PacketPlayOutScoreboardDisplayObjective
+        3c: PacketPlayOutEntityMetadata
+        3d: PacketPlayOutAttachEntity
+        3e: PacketPlayOutEntityVelocity
+        3f: PacketPlayOutEntityEquipment
+        40: PacketPlayOutExperience
+        41: PacketPlayOutUpdateHealth
+        42: PacketPlayOutScoreboardObjective
+        43: PacketPlayOutMount
+        44: PacketPlayOutScoreboardTeam
+        45: PacketPlayOutScoreboardScore
+        46: PacketPlayOutSpawnPosition
+        47: PacketPlayOutUpdateTime
+        48: PacketPlayOutTitle
+        49: PacketPlayOutNamedSoundEffect
+        4a: PacketPlayOutPlayerListHeaderFooter
+        4b: PacketPlayOutCollect
+        4c: PacketPlayOutEntityTeleport
+        4d: PacketPlayOutAdvancements
+        4e: PacketPlayOutUpdateAttributes
+        4f: PacketPlayOutEntityEffect
+
+
+Handshaking:
+    ServerBound:
+        0: PacketHandshakingInSetProtocol
+
+
+Status:
+    ServerBound:
+        0: PacketStatusInStart
+        1: PacketStatusInPing
+    ClientBound:
+        0: PacketStatusOutServerInfo
+        1: PacketStatusOutPong
+
+
+Login:
+    ServerBound:
+        0: PacketLoginInStart
+        1: PacketLoginInEncryptionBegin
+    ClientBound:
+        0: PacketLoginOutDisconnect
+        1: PacketLoginOutEncryptionBegin
+        2: PacketLoginOutSuccess
+        3: PacketLoginOutSetCompression
